@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>買い物サポート計算機</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f0f2f5;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ヘッダー */
+        header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .back-btn {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none; /* 初期は非表示 */
+        }
+
+        /* ページ共通 */
+        .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* メニュー画面のデザイン */
+        .menu-list { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .menu-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .menu-item:hover { background: #eef7ff; border-color: var(--primary-color); }
+        .menu-item-title { font-weight: bold; font-size: 1.1rem; color: #333; }
+        .menu-item-desc { font-size: 0.8rem; color: #777; margin-top: 4px; }
+
+        /* ツール画面の共通パーツ */
+        h2 { font-size: 1.2rem; margin-top: 0; color: #333; }
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: #666; }
+        input, select, textarea {
+            width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+        }
+        .split-inputs { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+        .result-box { padding: 15px; border-radius: 10px; margin: 15px 0; text-align: center; }
+        .res-discount { background: #fff5f5; border: 1px solid #ffe3e3; }
+        .res-unit { background: #eef7ff; border: 1px solid #cce5ff; }
+        .val-big { font-weight: bold; font-size: 1.5rem; }
+        .c-red { color: #dc3545; } .c-green { color: #28a745; } .c-blue { color: #004085; }
+        textarea { background: #fffef0; min-height: 300px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <button id="backBtn" class="back-btn" onclick="showPage('home')">◀ 戻る</button>
+        <span id="headerTitle">買い物サポート</span>
+    </header>
+
+    <div id="home" class="page active">
+        <h2>ツールを選択してください</h2>
+        <div class="menu-list">
+            <div class="menu-item" onclick="showPage('discountPage')">
+                <div>
+                    <div class="menu-item-title">割引計算機</div>
+                    <div class="menu-item-desc">30%OFFや2割引の価格を計算</div>
+                </div>
+                <span>▶</span>
+            </div>
+            <div class="menu-item" onclick="showPage('unitPage')">
+                <div>
+                    <div class="menu-item-title">100g単価計算機</div>
+                    <div class="menu-item-desc">gやkgから単価を算出して比較</div>
+                </div>
+                <span>▶</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="discountPage" class="page">
+        <h2>割引価格を計算</h2>
+        <div class="input-group">
+            <label>元の金額 (円)</label>
+            <input type="number" id="price" oninput="calcDiscount()">
+        </div>
+        <div class="input-group">
+            <label>割引率</label>
+            <div class="split-inputs">
+                <input type="number" id="discountValue" oninput="calcDiscount()">
+                <select id="discountUnit" onchange="calcDiscount()">
+                    <option value="percent">%</option>
+                    <option value="wari">割</option>
+                </select>
+            </div>
+        </div>
+        <div class="result-box res-discount">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>割引額:</span> <span id="savedAmount" class="c-red">0 円</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>支払額:</span> <span id="finalPrice" class="val-big c-green">0 円</span>
+            </div>
+        </div>
+        <textarea></textarea>
+    </div>
+
+    <div id="unitPage" class="page">
+        <h2>100gあたりの単価</h2>
+        <div class="input-group">
+            <label>価格 (円)</label>
+            <input type="number" id="totalPrice" placeholder="500" oninput="calcUnit()">
+        </div>
+        <div class="input-group">
+            <label>重さ</label>
+            <div class="split-inputs">
+                <input type="number" id="weightValue" placeholder="250" oninput="calcUnit()">
+                <select id="weightUnit" onchange="calcUnit()">
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                </select>
+            </div>
+        </div>
+        <div class="result-box res-unit">
+            <div style="font-size:0.8rem; color:#555; margin-bottom:5px;">100gあたりの値段</div>
+            <div id="unitPriceDisplay" class="val-big c-blue">0 円</div>
+        </div>
+        <textarea></textarea>
+    </div>
+</div>
+
+<script>
+    // ページ切り替えの仕組み
+    function showPage(pageId) {
+        // すべてのページを隠す
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(p => p.classList.remove('active'));
+        
+        // 指定したページを表示
+        document.getElementById(pageId).classList.add('active');
+
+        // ヘッダーの制御
+        const backBtn = document.getElementById('backBtn');
+        const headerTitle = document.getElementById('headerTitle');
+
+        if (pageId === 'home') {
+            backBtn.style.display = 'none';
+            headerTitle.innerText = '買い物サポート';
+        } else {
+            backBtn.style.display = 'block';
+            headerTitle.innerText = (pageId === 'discountPage') ? '割引計算' : '単価計算';
+        }
+    }
+
+    // 計算用フォーマット
+    function format(num) {
+        const rounded = Math.round(num * 10) / 10;
+        return rounded.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+    }
+
+    // 割引計算
+    function calcDiscount() {
+        const p = parseFloat(document.getElementById('price').value);
+        const v = parseFloat(document.getElementById('discountValue').value);
+        const u = document.getElementById('discountUnit').value;
+        if (!isNaN(p) && !isNaN(v)) {
+            let pct = (u === 'wari') ? v * 10 : v;
+            let s = p * (pct / 100);
+            document.getElementById('savedAmount').innerText = "- " + format(s) + " 円";
+            document.getElementById('finalPrice').innerText = format(p - s) + " 円";
+        }
+    }
+
+    // 単価計算
+    function calcUnit() {
+        const p = parseFloat(document.getElementById('totalPrice').value);
+        const w = parseFloat(document.getElementById('weightValue').value);
+        const u = document.getElementById('weightUnit').value;
+        if (!isNaN(p) && !isNaN(w) && w > 0) {
+            let g = (u === 'kg') ? w * 1000 : w;
+            document.getElementById('unitPriceDisplay').innerText = format((p / g) * 100) + " 円";
+        }
+    }
+</script>
+
+</body>
+</html>
